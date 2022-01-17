@@ -1,3 +1,3 @@
-[submodule ".\\patterns\\Hooking.Patterns"]
-	path = .\\patterns\\Hooking.Patterns
+[submodule "patterns/Hooking.Patternsns"]
+	path = patterns/Hooking.Patternsns
 	url = https://github.com/ThirteenAG/Hooking.Patterns.git
