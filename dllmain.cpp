@@ -6,6 +6,7 @@
 		// if having lots of mapdata with 'full-map-size' extents loaded that will always pass)
         // made originally by CitizenFX and this is part of FiveM I have just ported it into standalone asi/dll
 		// https://github.com/citizenfx/fivem/blob/de2f238ab8d1a8041c9f5a0cae99299f9cb2a868/code/components/gta-streaming-five/src/UnkStuff.cpp#L339
+		// https://github.com/citizenfx/fivem/blob/e4b7373c3eefcb447b79a140cdd5f08c22b7a66b/code/components/gta-streaming-five/src/PatchDecalLimits.cpp#L26
         // i don't take any credits for this x)
 
 struct PatternPair
