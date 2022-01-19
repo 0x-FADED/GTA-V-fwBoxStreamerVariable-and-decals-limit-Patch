@@ -82,7 +82,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <TargetName>fwBoxStreamerVariablePatch</TargetName>
+    <TargetName>fwBoxStreamerVariable_DecalsLimit-Patch</TargetName>
     <OutDir>.\Builds</OutDir>
     <TargetExt>.asi</TargetExt>
   </PropertyGroup>
