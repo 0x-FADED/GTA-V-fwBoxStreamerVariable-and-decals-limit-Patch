@@ -82,7 +82,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <TargetName>fwBoxStreamerVariablePatch</TargetName>
+    <TargetName>fwBoxStreamerVariable_DecalsLimit-Patch</TargetName>
     <OutDir>.\Builds</OutDir>
     <TargetExt>.asi</TargetExt>
   </PropertyGroup>
@@ -159,6 +159,8 @@
       <FloatingPointModel>Fast</FloatingPointModel>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <DebugInformationFormat>None</DebugInformationFormat>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
+      <LanguageStandard_C>stdc17</LanguageStandard_C>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
