@@ -1,6 +1,7 @@
 #pragma once
 #include <stdint.h>
 #include <type_traits>
+#include <windows.h>
 
 /*
  * This file is part of the CitizenFX project - http://citizen.re/
