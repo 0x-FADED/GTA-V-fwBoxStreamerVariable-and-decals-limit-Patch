@@ -100,6 +100,8 @@ namespace hook
 		return code;
 	}
 
+         //code below is form @alexguirre https://github.com/alexguirre/gtav-WeaponLimitsAdjuster/blob/115ac5fe48ba62bb8c718b4d28ae34d4cf23cc6c/WeaponLimitsAdjuster/dllmain.cpp#L144
+
 	void* AllocateStubMemory(size_t size)
 	{
 		void* origin = GetModuleHandle(NULL);
