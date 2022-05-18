@@ -1,13 +1,13 @@
-#include <patterns/Hooking.h>
-#include <patterns/Hooking.Patterns.h>
+#include "patterns/Hooking.h"
+#include "patterns/Hooking.Patterns/Hooking.Patterns.h"
 #include <Windows.h>
 
 		// fwBoxStreamerVariable: relocate internal multi-node BVH traversal list and make it bigger (1000 limit is not enough
 		// if having lots of mapdata with 'full-map-size' extents loaded that will always pass)
-                // made originally by CitizenFX and this is part of FiveM I have just ported it into standalone asi/dll
+        // made originally by CitizenFX and this is part of FiveM I have just ported it into standalone asi/dll
 		// https://github.com/citizenfx/fivem/blob/de2f238ab8d1a8041c9f5a0cae99299f9cb2a868/code/components/gta-streaming-five/src/UnkStuff.cpp#L339
 		// https://github.com/citizenfx/fivem/blob/e4b7373c3eefcb447b79a140cdd5f08c22b7a66b/code/components/gta-streaming-five/src/PatchDecalLimits.cpp#L26
-                // i don't take any credits for this x)
+        // i don't take any credits for this x)
 
 struct PatternPair
 {
@@ -25,9 +25,20 @@ struct DecalDef
 	char pad[80];
 };
 
-constexpr int kNumDecalDefs = 512;
+int kNumDecalDefsSize;
+int fwBoxStreamerVariableSize;
 
 static void* decalDefStore;
+
+
+void TomlShit()
+{
+	kNumDecalDefsSize = GetPrivateProfileInt("DecalLimitPatcher", "DecalDefs", -1, ".\\fwBoxStreamerVariable_DecalsLimit-Patch.toml");
+	kNumDecalDefsSize = kNumDecalDefsSize <= 0 ? 0x420 : kNumDecalDefsSize;
+
+	fwBoxStreamerVariableSize = GetPrivateProfileInt("fwBoxStreamerVariableSizePatcher", "fwBoxStreamerVariableSize", -1, ".\\fwBoxStreamerVariable_DecalsLimit-Patch.toml");
+	fwBoxStreamerVariableSize = fwBoxStreamerVariableSize <= 0 ? 0x204B0 : fwBoxStreamerVariableSize;
+}
 
 void PatchDecalLimits()
 {
@@ -56,7 +67,7 @@ void PatchDecalLimits()
 			for (auto& entry : list)
 			{
 				auto location = hook::pattern(entry.pattern).count(1).get(0).get<char>(entry.offset);
-				hook::put(location, (entry.clamp ? (kNumDecalDefs - 1) : kNumDecalDefs));
+				hook::put(location, (entry.clamp ? (kNumDecalDefsSize - 1) : kNumDecalDefsSize));
 			}
 		}
 
@@ -95,7 +106,7 @@ void PatchDecalLimits()
 				{ "48 83 C3 50 FF CF 79 F0 48 8D", -17 },
 			};
 
-			decalDefStore = hook::AllocateStubMemory(sizeof(DecalDef) * kNumDecalDefs);
+			decalDefStore = hook::AllocateStubMemory(sizeof(DecalDef) * kNumDecalDefsSize);
 			void* oldAddress = nullptr;
 
 			for (auto& entry : list)
@@ -127,20 +138,20 @@ void PatchDecalLimits()
 void fwBoxStreamerVariablePatch()
 {
 
-	auto mnbvhList = hook::AllocateStubMemory(4096 * 8);
+	auto mnbvhList = hook::AllocateStubMemory(sizeof(void*) * fwBoxStreamerVariableSize);
 
 	{
 		// GetIntersectingAABB
 		auto location = hook::get_pattern<char>("0F 28 0A 48 8B 49 08 4C 8D 25", 10);
 		hook::put<int32_t>(location, (char*)mnbvhList - location + 4);
-		hook::put<int32_t>(location + 31, 4004);
+		hook::put<int32_t>(location + 31, fwBoxStreamerVariableSize);
 	}
 
 	{
 		// GetIntersectingLine
 		auto location = hook::get_pattern<char>("48 8B 49 08 4C 8D 3D", 7);
 		hook::put<int32_t>(location, (char*)mnbvhList - location + 4);
-		hook::put<int32_t>(location + 8, 4004);
+		hook::put<int32_t>(location + 8, fwBoxStreamerVariableSize);
 	}
 }
 
@@ -148,6 +159,7 @@ BOOL WINAPI DllMain(_In_ void* _DllHandle, _In_ unsigned long _Reason, _In_opt_ 
 {
 	if (_Reason == DLL_PROCESS_ATTACH)
 	{
+		TomlShit();
 		fwBoxStreamerVariablePatch();
 		PatchDecalLimits();
 	}
