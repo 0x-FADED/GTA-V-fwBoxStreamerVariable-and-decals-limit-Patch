@@ -1,0 +1,7 @@
+[DecalLimitPatcher]
+
+# determines the maximum number of decalDefsSize minimum can be used is 512.
+DecalDefs = 620
+[fwBoxStreamerVariableSizePatcher]
+# the maximum size of fwBoxStreamerVariable the minimum can be used is 1048.
+fwBoxStreamerVariableSize = 6000

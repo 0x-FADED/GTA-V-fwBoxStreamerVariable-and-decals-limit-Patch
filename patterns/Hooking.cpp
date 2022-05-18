@@ -47,60 +47,7 @@ namespace hook
 	// Max range for seeking a memory block. (= 1024MB)
 	const uint64_t MAX_MEMORY_RANGE = 0x40000000;
 
-	void* AllocateFunctionStub(void* origin, void* function, int type)
-	{
-		static void* g_currentStub = nullptr;
-
-		if (!g_currentStub)
-		{
-			ULONG_PTR minAddr;
-			ULONG_PTR maxAddr;
-
-			SYSTEM_INFO si;
-			GetSystemInfo(&si);
-			minAddr = (ULONG_PTR)si.lpMinimumApplicationAddress;
-			maxAddr = (ULONG_PTR)si.lpMaximumApplicationAddress;
-
-			if ((ULONG_PTR)origin > MAX_MEMORY_RANGE &&
-				minAddr < (ULONG_PTR)origin - MAX_MEMORY_RANGE)
-				minAddr = (ULONG_PTR)origin - MAX_MEMORY_RANGE;
-
-			if (maxAddr > (ULONG_PTR)origin + MAX_MEMORY_RANGE)
-				maxAddr = (ULONG_PTR)origin + MAX_MEMORY_RANGE;
-
-			LPVOID pAlloc = origin;
-
-			while ((ULONG_PTR)pAlloc >= minAddr)
-			{
-				pAlloc = FindPrevFreeRegion(pAlloc, (LPVOID)minAddr, si.dwAllocationGranularity);
-				if (pAlloc == NULL)
-					break;
-
-				g_currentStub = VirtualAlloc(pAlloc, MEMORY_BLOCK_SIZE, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
-				if (g_currentStub != NULL)
-					break;
-			}
-		}
-		if (!g_currentStub)
-			return nullptr;
-
-		char* code = (char*)g_currentStub;
-
-		*(uint8_t*)code = 0x48;
-		*(uint8_t*)(code + 1) = 0xb8 | type;
-
-		*(uint64_t*)(code + 2) = (uint64_t)function;
-
-		*(uint16_t*)(code + 10) = 0xE0FF | (type << 8);
-
-		*(uint64_t*)(code + 12) = 0xCCCCCCCCCCCCCCCC;
-
-		g_currentStub = (void*)((uint64_t)g_currentStub + 20);
-
-		return code;
-	}
-
-         //code below is form @alexguirre https://github.com/alexguirre/gtav-WeaponLimitsAdjuster/blob/115ac5fe48ba62bb8c718b4d28ae34d4cf23cc6c/WeaponLimitsAdjuster/dllmain.cpp#L144
+	//code below is form @alexguirre https://github.com/alexguirre/gtav-WeaponLimitsAdjuster/blob/115ac5fe48ba62bb8c718b4d28ae34d4cf23cc6c/WeaponLimitsAdjuster/dllmain.cpp#L144
 
 	void* AllocateStubMemory(size_t size)
 	{
