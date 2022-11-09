@@ -1,53 +1,11 @@
 #include "Hooking.h"
 #include <Windows.h>
 
-
-/*
- * This file is part of the CitizenFX project - http://citizen.re/
- *
- * See LICENSE and MENTIONS in the root of the source tree for information
- * regarding licensing.
- * https://github.com/citizenfx/fivem/blob/master/code/client/citicore/PatternCache.cpp
- */
-
 namespace hook
 {
-	LPVOID FindPrevFreeRegion(LPVOID pAddress, LPVOID pMinAddr, DWORD dwAllocationGranularity)
-	{
-		ULONG_PTR tryAddr = (ULONG_PTR)pAddress;
-
-		// Round down to the next allocation granularity.
-		tryAddr -= tryAddr % dwAllocationGranularity;
-
-		// Start from the previous allocation granularity multiply.
-		tryAddr -= dwAllocationGranularity;
-
-		while (tryAddr >= (ULONG_PTR)pMinAddr)
-		{
-			MEMORY_BASIC_INFORMATION mbi;
-			if (VirtualQuery((LPVOID)tryAddr, &mbi, sizeof(MEMORY_BASIC_INFORMATION)) ==
-				0)
-				break;
-
-			if (mbi.State == MEM_FREE)
-				return (LPVOID)tryAddr;
-
-			if ((ULONG_PTR)mbi.AllocationBase < dwAllocationGranularity)
-				break;
-
-			tryAddr = (ULONG_PTR)mbi.AllocationBase - dwAllocationGranularity;
-		}
-
-		return NULL;
-	}
-
-	// Size of each memory block. (= page size of VirtualAlloc)
-	const uint64_t MEMORY_BLOCK_SIZE = 0x1000;
 
 	// Max range for seeking a memory block. (= 1024MB)
 	const uint64_t MAX_MEMORY_RANGE = 0x40000000;
-
-	//code below is form @alexguirre https://github.com/alexguirre/gtav-WeaponLimitsAdjuster/blob/115ac5fe48ba62bb8c718b4d28ae34d4cf23cc6c/WeaponLimitsAdjuster/dllmain.cpp#L144
 
 	void* AllocateStubMemory(size_t size)
 	{
@@ -56,31 +14,44 @@ namespace hook
 		ULONG_PTR minAddr;
 		ULONG_PTR maxAddr;
 
+		MEM_ADDRESS_REQUIREMENTS addressReqs = { 0 };
+		MEM_EXTENDED_PARAMETER param = { 0 };
+
 		SYSTEM_INFO si;
 		GetSystemInfo(&si);
 		minAddr = (ULONG_PTR)si.lpMinimumApplicationAddress;
 		maxAddr = (ULONG_PTR)si.lpMaximumApplicationAddress;
 
-		if ((ULONG_PTR)origin > MAX_MEMORY_RANGE &&
-			minAddr < (ULONG_PTR)origin - MAX_MEMORY_RANGE)
+
+		// origin ± 512MB
+		if ((ULONG_PTR)origin > MAX_MEMORY_RANGE && minAddr < (ULONG_PTR)origin - MAX_MEMORY_RANGE)
 			minAddr = (ULONG_PTR)origin - MAX_MEMORY_RANGE;
 
 		if (maxAddr > (ULONG_PTR)origin + MAX_MEMORY_RANGE)
 			maxAddr = (ULONG_PTR)origin + MAX_MEMORY_RANGE;
 
+
+		addressReqs.Alignment = NULL; 
+		addressReqs.LowestStartingAddress = (PVOID)minAddr < si.lpMinimumApplicationAddress ? si.lpMinimumApplicationAddress : (PVOID)minAddr;
+		addressReqs.HighestEndingAddress = (PVOID)(maxAddr - 1) > si.lpMaximumApplicationAddress ? si.lpMaximumApplicationAddress : (PVOID)(maxAddr - 1);
+
+		param.Type = MemExtendedParameterAddressRequirements;
+		param.Pointer = &addressReqs;
+
+		auto hModule = GetModuleHandle("kernelbase.dll");
+		if (hModule == nullptr)
+		{
+			hModule = LoadLibrary("kernelbase.dll");
+		}
+
+		//using VirtualAlloc2 throws linker error gotta either use this workaround or use #pragma comment(lib, "mincore") to get it to work
+		auto pVirtualAlloc2 = (decltype(&::VirtualAlloc2))GetProcAddress(hModule, "VirtualAlloc2");
+
 		LPVOID pAlloc = origin;
 
 		void* stub = nullptr;
-		while ((ULONG_PTR)pAlloc >= minAddr)
-		{
-			pAlloc = FindPrevFreeRegion(pAlloc, (LPVOID)minAddr, si.dwAllocationGranularity);
-			if (pAlloc == NULL)
-				break;
 
-			stub = VirtualAlloc(pAlloc, size, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
-			if (stub != NULL)
-				break;
-		}
+		stub = pVirtualAlloc2(GetCurrentProcess(), NULL, size, MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE, &param, 1);
 
 		return stub;
 	}
