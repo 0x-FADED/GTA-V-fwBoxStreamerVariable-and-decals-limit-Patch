@@ -3,12 +3,14 @@
 #include <cassert>
 #include <memory>
 
+#pragma warning(disable:4146)
+
 namespace hook
 {
 
-	//http://stackoverflow.com/questions/4840410/how-to-align-a-pointer-in-c
+	// http://stackoverflow.com/questions/4840410/how-to-align-a-pointer-in-c
 	/* Align upwards -  arithmetic mode */
-	static inline ULONG_PTR AlignUp(ULONG_PTR stack, size_t align)
+	static inline ULONG_PTR AlignUp(ULONG_PTR stack, SIZE_T align)
 	{
 		assert(align > 0 && (align & (align - 1)) == 0); // Power of 2 
 		assert(stack != 0);
@@ -20,7 +22,7 @@ namespace hook
 		return addr;
 	}
 	/* Align downwards - bit mask mode */
-	static inline ULONG_PTR AlignDown(ULONG_PTR stack, size_t align)
+	static inline ULONG_PTR AlignDown(ULONG_PTR stack, SIZE_T align)
 	{
 		assert(align > 0 && (align & (align - 1)) == 0); // Power of 2 
 		assert(stack != 0);
@@ -30,19 +32,13 @@ namespace hook
 		assert(addr <= stack);
 		return addr;
 	}
-	size_t GetAllocationAlignment()
-	{
-		SYSTEM_INFO info;
-		memset(&info, 0, sizeof(info));
-		GetSystemInfo(&info);
-		return info.dwAllocationGranularity;
-	}
-	// Max range for seeking a memory block. (= 1024MB)
-	const uint64_t MAX_MEMORY_RANGE = 0x40000000;
 
-	void* AllocateStubMemory(size_t size)
+	void* AllocateStubMemory(SIZE_T size)
 	{
-		void* origin = GetModuleHandle(NULL);
+		// Max range for seeking a memory block. (= 1024MB)
+		constexpr uint64_t MAX_MEMORY_RANGE = 0x40000000;
+
+		void* origin = GetModuleHandle(nullptr);
 
 		ULONG_PTR minAddr;
 		ULONG_PTR maxAddr;
@@ -63,9 +59,8 @@ namespace hook
 		if (maxAddr > (ULONG_PTR)origin + MAX_MEMORY_RANGE)
 			maxAddr = (ULONG_PTR)origin + MAX_MEMORY_RANGE; 
 		
-		auto alignment = GetAllocationAlignment();
-		auto start = AlignUp(minAddr, alignment);
-		auto end = AlignDown(maxAddr, alignment);
+		auto start = AlignUp(minAddr, si.dwAllocationGranularity);
+		auto end = AlignDown(maxAddr, si.dwAllocationGranularity);
 
 		addressReqs.Alignment = NULL; // any alignment
 		addressReqs.LowestStartingAddress = (PVOID)start < si.lpMinimumApplicationAddress ? si.lpMinimumApplicationAddress : (PVOID)start;
@@ -74,18 +69,12 @@ namespace hook
 		param.Type = MemExtendedParameterAddressRequirements;
 		param.Pointer = &addressReqs;
 
-		auto hModule = GetModuleHandle("kernelbase.dll");
-		if (hModule == nullptr)
-		{
-			hModule = LoadLibrary("kernelbase.dll");
-		}
-
 		//using VirtualAlloc2 throws linker error gotta either use this workaround or use #pragma comment(lib, "mincore") to get it to work
-		auto pVirtualAlloc2 = (decltype(&::VirtualAlloc2))GetProcAddress(hModule, "VirtualAlloc2");
+		auto pVirtualAlloc2 = (decltype(&::VirtualAlloc2))GetProcAddress(GetModuleHandleW(L"kernelbase.dll"), "VirtualAlloc2");
 
 		void* stub = nullptr;
 
-		stub = pVirtualAlloc2(GetCurrentProcess(), NULL, size, MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE, &param, 1);
+		stub = pVirtualAlloc2(GetCurrentProcess(), nullptr, size, MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE, &param, 1);
 
 		return stub;
 	}
